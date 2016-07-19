@@ -41,7 +41,8 @@ def _read(path):
 
 def _get_dict(lang):
 	if lang == "de":
-		return _read("/usr/share/dict/german")
+		return set(_read("/usr/share/dict/german") +
+				_read("german.dic"))
 	if lang == "en":
 		return _read("/usr/share/dict/british-english")
 	raise ValueError("no dict for language \"%s\"" % lang)
@@ -132,7 +133,7 @@ def distinct(literals):
 # 3) combine the replacement tables to a SAT formula
 # 4) append the one-hot requirement
 # 5) solve using a SAT solver
-def crack(text, lang, top=5):
+def crack(text, lang, top=5, iterations=300):
 	text = text.lower()
 
 	d = get_dict(lang)
@@ -217,11 +218,13 @@ def crack(text, lang, top=5):
 		quality[c] = trans
 
 		n += 1
-		if n > 300:
+		if n >= iterations:
 			break
 		block = [ d() != model[d] for d in model ]
 		solver.add(z3.Or(block))
 		result = solver.check()
 
+	if len(quality) < top:
+		top = len(quality)
 	best = reversed(sorted(quality.keys())[-top:])
 	return [ quality[i] for i in best ]

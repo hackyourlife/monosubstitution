@@ -191,11 +191,20 @@ def crack(text, lang, top=5, iterations=300):
 		f = "(or %s)" % " ".join(word_formulas)
 		smt += ["(assert %s)" % f]
 
-	# one-hot requirement
+	# one-hot requirement: one input to at most one output
 	for li in input_letters:
 		smt += [ "(assert %s)" % distinct([ "%sto%s" % \
 				(get_letter(li), get_letter(lo)) \
 				for lo in output_letters ]) ]
+
+	# only one mapping per letter allowed (kill things like a->c & b->c)
+	for lo in output_letters:
+		smt += [ "(assert (=> (or %s) %s))" % (" ".join([ "%sto%s" % \
+				(get_letter(li), get_letter(lo)) \
+				for li in input_letters ]),
+				distinct([ "%sto%s" % \
+				(get_letter(li), get_letter(lo)) \
+				for li in input_letters ])) ]
 
 	#smt += ["(check-sat)", "(get-model)"]
 	
@@ -231,5 +240,5 @@ def crack(text, lang, top=5, iterations=300):
 
 	if len(quality) < top:
 		top = len(quality)
-	best = reversed(sorted(quality.keys())[-top:])
+	best = sorted(quality.keys())[:top]
 	return [ quality[i] for i in best ]

@@ -43,6 +43,7 @@ def _get_dict(lang):
 	if lang == "de":
 		return set(_read("/usr/share/dict/german") +
 				_read("german.dic"))
+		#return set(_read("/usr/share/dict/german"))
 	if lang == "en":
 		return _read("/usr/share/dict/british-english")
 	raise ValueError("no dict for language \"%s\"" % lang)
@@ -77,8 +78,9 @@ def cost(text, freq):
 ################################################################################
 # MONOALPHABETIC SUBSTITUTION
 ################################################################################
+ascii_only = re.compile(r"\W")
 def get_pattern(word):
-	word = word.lower()
+	word = ascii_only.sub(" ", word).lower()
 	l = {}
 	pattern = ""
 	for c in word:
@@ -102,7 +104,6 @@ def get_pattern_dict(lang):
 			pattern_dicts[lang][p] = [ w ]
 	return pattern_dicts[lang]
 
-ascii_only = re.compile(r"\W")
 def get_words(text):
 	return [ w.strip() for w in ascii_only.sub(" ", text).split(" ")
 				if len(w.strip()) > 1 ]
@@ -172,7 +173,11 @@ def crack(text, lang, top=5, iterations=300):
 	# define word constraints
 	for word in words:
 		word_formulas = []
-		candidates = patterns[get_pattern(word)]
+		pattern = get_pattern(word)
+		if not pattern in patterns:
+			print("'%s' (%s) not in pattern db!" % (word, pattern))
+			continue
+		candidates = patterns[pattern]
 		for candidate in candidates:
 			word_formula = []
 			for letter in word:

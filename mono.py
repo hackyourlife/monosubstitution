@@ -45,7 +45,7 @@ def _get_dict(lang):
 				_read("german.dic"))
 		#return set(_read("/usr/share/dict/german"))
 	if lang == "en":
-		return _read("/usr/share/dict/british-english")
+		return set(_read("/usr/share/dict/british-english"))
 	raise ValueError("no dict for language \"%s\"" % lang)
 
 def get_dict(lang):
@@ -171,7 +171,7 @@ def crack(text, lang, top=5, iterations=300):
 	#		get_letter(top_in_lang))]
 
 	# define word constraints
-	for word in words:
+	for word in set(words):
 		word_formulas = []
 		pattern = get_pattern(word)
 		if not pattern in patterns:

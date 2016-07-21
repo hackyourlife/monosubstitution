@@ -3,6 +3,7 @@
 # vim:set ts=8 sts=8 sw=8 tw=80 noet cc=80:
 
 import sys
+import mono
 from random import shuffle
 
 tin = "".join([ chr(x) for x in range(ord("a"), ord("z")) ])
@@ -24,5 +25,14 @@ def translate(text, trans):
 
 if __name__ == "__main__":
 	print("%s -> %s" % (tin, tout))
-	text = translate(sys.argv[1], mktrans(tin, tout))
+	if len(sys.argv) == 3:
+		d = mono.get_dict(sys.argv[1])
+		words = mono.get_words(sys.argv[2].lower())
+		errors = [ word for word in words if word not in d ]
+		text = translate(sys.argv[2], mktrans(tin, tout))
+		if len(errors) > 0:
+			print("warning: those words are not in the dict: %s" % \
+					", ".join(errors))
+	else:
+		text = translate(sys.argv[1], mktrans(tin, tout))
 	print(text)

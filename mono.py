@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim:set ts=8 sts=8 sw=8 tw=80 noet cc=80:
 
+import os
 import re
 import z3
 
@@ -12,6 +13,15 @@ frequencies_de_utf = { "ä": 0.578, "ö": 0.443, "ü": 0.995, "ß": 0.307 }
 frequencies_en = [ 8.167, 1.492, 2.782, 4.253, 12.702, 2.228, 2.015, 6.094,
 		6.966, 0.153, 0.772, 4.025, 2.406, 6.749, 7.507, 1.929, 0.095,
 		5.987, 6.327, 9.056, 2.758, 0.978, 2.361, 0.15, 1.974, 0.074 ]
+
+dict_paths = {
+		"en": "/usr/share/dict/british-english",
+		"de": "/usr/share/dict/german",
+		"de-small": "german-small.dic"
+		}
+
+if not os.path.exists(dict_paths["de"]):
+	dict_paths["de"] = "/usr/share/dict/ngerman"
 
 def merge_dicts(*dicts):
 	r = {}
@@ -28,24 +38,26 @@ def default_frequencies(lang):
 
 	if lang == "en":
 		return basic_frequencies(frequencies_en)
-	if lang == "de":
+	if lang in [ "de", "de-small", "de-medium" ]:
 		return merge_dicts(basic_frequencies(frequencies_de),
 				scale(frequencies_de_utf))
 	raise ValueError("no frequency table for language \"%s\"" % lang)
 
 dicts = {}
 def _read(path):
+	print("loading %s" % path)
 	with open(path) as f:
 		return [ l.strip().lower() for l in f.readlines() \
 				if len(l.strip()) > 0 ]
 
 def _get_dict(lang):
 	if lang == "de":
-		return set(_read("/usr/share/dict/german") +
+		return set(_read(dict_paths[lang]) +
 				_read("german.dic"))
-		#return set(_read("/usr/share/dict/german"))
-	if lang == "en":
-		return set(_read("/usr/share/dict/british-english"))
+	elif lang == "de-medium":
+		return set(_read(dict_paths["de"]))
+	elif lang in dict_paths:
+		return set(_read(dict_paths[lang]))
 	raise ValueError("no dict for language \"%s\"" % lang)
 
 def get_dict(lang):
@@ -99,9 +111,9 @@ def get_pattern_dict(lang):
 	for w in d:
 		p = get_pattern(w)
 		if p in pattern_dicts[lang]:
-			pattern_dicts[lang][p] += [ w ]
+			pattern_dicts[lang][p].add(w)
 		else:
-			pattern_dicts[lang][p] = [ w ]
+			pattern_dicts[lang][p] = set([ w ])
 	return pattern_dicts[lang]
 
 def get_words(text):
@@ -242,3 +254,118 @@ def crack(text, lang, top=5, iterations=300):
 		top = len(quality)
 	best = sorted(quality.keys())[:top]
 	return [ quality[i] for i in best ]
+
+def crack_tree(text, lang, skip_same=True):
+	text = text.lower()
+
+	d = get_dict(lang)
+	patterns = get_pattern_dict(lang)
+	words = get_words(text)
+	unique_words = set(words)
+
+	alphabet = sorted(list(set("".join(unique_words))))
+
+	lang_freq = default_frequencies(lang)
+
+	word_list = { word: sorted(patterns[get_pattern(word)]) \
+			for word in unique_words \
+			if get_pattern(word) in patterns }
+
+	count = lambda a, b: len(set(a)) + len(set(b)) - len(set(a + b))
+
+	def find_common(found, new):
+		return list(reversed(sorted(new, key=lambda x: count(found, x) \
+				* len(patterns[get_pattern(x)]))))
+
+	def heuristic(word_list):
+		tree_starts = sorted(word_list.keys(),
+				key=lambda x: -len(set(x)) / len(word_list[x]))
+		print([ "%s: %s" % (w, len(word_list[w])) for w in tree_starts ])
+
+		words = word_list.keys()
+		result = [ tree_starts[0] ]
+		rest = tree_starts[1:]
+		joined = result[0]
+		while len(rest) > 0:
+			s = find_common(joined, rest)
+			result += [ s[0] ]
+			rest = s[1:]
+			joined = "".join(set(joined + s[0]))
+		return result
+
+	_words = heuristic(word_list)
+	Dmax = len(word_list)
+
+	print(_words)
+	print([ "".join(sorted(list(set(w)))) for w in _words ])
+	print("Dmax = %d, len(unique_words) = %d" % (Dmax, len(unique_words)))
+
+	mappings = {}
+	best_score = 0
+
+	class Finished(Exception):
+		pass
+
+	def translate(text, trans):
+		def _trans(c, trans):
+			l = c.lower()
+			if l in trans:
+				return trans[l] if l == c else trans[l].upper()
+			return c
+		return "".join([ _trans(c, trans) for c in text ])
+
+	def get_mapping(f):
+		return "".join([ f[l] if l in f else "*" for l in alphabet ])
+
+	def compare_score(f, score):
+		nonlocal best_score, mappings
+		if score >= best_score:
+			print("%s: %s (%s)" % (score, get_mapping(f),
+				translate(text, f)))
+			if score in mappings:
+				mappings[score] += [ f ]
+			else:
+				mappings[score] = [ f ]
+			best_score = score
+
+	def can_get_better(depth, score):
+		nonlocal best_score, Dmax
+		return Dmax - depth + score >= best_score
+
+	def consistent(f, W, X):
+		f_new = { k: v for (k, v) in f.items() }
+		g = set(f.values())
+		for i in range(len(W)):
+			c = W[i]
+			if c in f_new:
+				if f_new[c] != X[i]:
+					return False, f
+			elif skip_same and X[i] in g:
+				return False, f
+			f_new[c] = X[i]
+			g.add(X[i])
+		return True, f_new
+
+	def solve(depth, f, score):
+		if depth >= Dmax:
+			compare_score(f, score)
+			#if score == depth:
+			#	raise Finished()
+			return
+		elif not can_get_better(depth, score):
+			return
+		else:
+			w = _words[depth]
+			for x in word_list[w]:
+				c, f_new = consistent(f, w, x)
+				if c:
+					solve(depth + 1, f_new, score + 1)
+			solve(depth + 1, f, score)
+
+	try:
+		solve(0, {}, 0)
+	except Finished:
+		pass
+
+	return sorted(mappings[best_score], key=lambda x:
+			cost(translate(text, x), lang_freq))

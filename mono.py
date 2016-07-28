@@ -171,12 +171,19 @@ def crack(text, lang, top=5, iterations=300):
 	input_letters = set("".join(words))
 	output_letters = set([ c for w in d for c in w ])
 
+	def encode_word(w):
+		return "".join([ get_letter(l) for l in w ])
+
 	smt = []
 	# define variables
 	for li in input_letters:
 		for lo in output_letters:
 			smt += ["(declare-const %sto%s Bool)" % (get_letter(li),
 					get_letter(lo))]
+
+	# unknown words
+	for w in set(words):
+		smt += ["(declare-const no-%s Bool)" % encode_word(w)]
 
 	# define top frequency "constraint"
 	#smt += ["(assert %sto%s)" % (get_letter(top_in_text),
@@ -200,6 +207,7 @@ def crack(text, lang, top=5, iterations=300):
 			f = "(and %s)" % " ".join(word_formula)
 
 			word_formulas += [ f ]
+		word_formulas += [ "no-%s" % encode_word(word) ]
 		f = "(or %s)" % " ".join(word_formulas)
 		smt += ["(assert %s)" % f]
 
@@ -218,8 +226,12 @@ def crack(text, lang, top=5, iterations=300):
 				(get_letter(li), get_letter(lo)) \
 				for li in input_letters ])) ]
 
+	# allow no unknown words initially
+	smt += ["(assert (and %s))" % " ".join([ "(not no-%s)" % encode_word(w)\
+			for w in set(words) ])]
+
 	#smt += ["(check-sat)", "(get-model)"]
-	
+
 	smt2 = "\n".join(smt)
 
 	solver = z3.Solver()
@@ -229,6 +241,16 @@ def crack(text, lang, top=5, iterations=300):
 	translations = []
 	quality = {}
 	n = 0
+
+	# allow one unknown word, if it is unsat otherwise
+	if result != z3.sat:
+		smt[-1] = "(assert %s)" % distinct([ "no-%s" % encode_word(w) \
+				for w in set(words)])
+		smt2 = "\n".join(smt)
+		solver.reset()
+		solver.add(z3.parse_smt2_string(smt2))
+		result = solver.check()
+
 	while result == z3.sat:
 		model = solver.model()
 		decls = model.decls()
@@ -236,7 +258,8 @@ def crack(text, lang, top=5, iterations=300):
 		mappings = [ v for v in mvars if z3.is_true(model[mvars[v]]) ]
 		get_from = lambda x: chr(int(x.split("to")[0][1:]))
 		get_to = lambda x: chr(int(x.split("to")[1][1:]))
-		trans = { get_from(m): get_to(m) for m in mappings }
+		trans = { get_from(m): get_to(m) for m in mappings \
+				if not m.startswith("no-") }
 		translations += [ trans ]
 
 		t = "".join([ trans[c] if c in trans else c for c in text ])

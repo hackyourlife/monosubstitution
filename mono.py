@@ -366,7 +366,9 @@ def crack_tree(text, lang, skip_same=True):
 		return "".join([ _trans(c, trans) for c in text ])
 
 	def get_mapping(f):
-		return "".join([ f[l] if l in f else "*" for l in alphabet ])
+		return "%s -> %s" % ("".join(alphabet),
+				"".join([ f[l] if l in f else "*" \
+						for l in alphabet ]))
 
 	def compare_score(f, score):
 		nonlocal best_score, mappings

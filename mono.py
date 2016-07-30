@@ -13,8 +13,28 @@ frequencies_de_utf = { "ä": 0.578, "ö": 0.443, "ü": 0.995, "ß": 0.307 }
 frequencies_en = [ 8.167, 1.492, 2.782, 4.253, 12.702, 2.228, 2.015, 6.094,
 		6.966, 0.153, 0.772, 4.025, 2.406, 6.749, 7.507, 1.929, 0.095,
 		5.987, 6.327, 9.056, 2.758, 0.978, 2.361, 0.15, 1.974, 0.074 ]
+frequencies_es = [ 11.525, 2.215, 4.019, 5.01, 12.181, 0.692, 1.768, 0.703,
+		6.247, 0.493, 0.011, 4.967, 3.157, 6.712, 8.683, 2.51, 0.877,
+		6.871, 7.977, 4.632, 2.927, 1.138, 0.017, 0.215, 1.008, 0.467 ]
+frequencies_es_utf = { "á": 0.502, "é": 0.433, "í": 0.725, "ñ": 0.311, "ó":
+		0.827, "ú": 0.168, "ü": 0.012 }
+frequencies_fr = [ 7.636, 0.901, 3.26, 3.669, 14.715, 1.066, 0.866, 0.737,
+		7.529, 0.613, 0.049, 5.456, 2.968, 7.095, 5.796, 2.521, 1.362,
+		6.693, 7.948, 7.244, 6.311, 1.838, 0.074, 0.427, 0.128, 0.326 ]
+frequencies_fr_utf = { "à": 0.486, "â": 0.051, "œ": 0.018, "ç": 0.085, "è":
+		0.271, "é": 1.504, "ê": 0.218, "ë": 0.008, "î": 0.045, "ï":
+		0.005, "ô": 0.023, "ù": 0.058 }
+frequencies_ru = { "А": 7.5, "Б": 2.01, "В": 4.33, "Г": 1.72, "Д": 3.09, "Е":
+		8.5, "Ё": 0.2, "Ж": 1.01, "З": 1.48, "И": 7.09, "Й": 1.21, "К":
+		3.3, "Л": 4.96, "М": 3.1, "Н": 6.7, "О": 11.07, "П": 2.47, "Р":
+		4.33, "С": 4.97, "Т": 5.97, "У": 2.22, "Ф": 0.21, "Х": 0.95,
+		"Ц": 0.39, "Ч": 1.4, "Ш": 0.72, "Щ": 0.3, "Ъ": 0.02, "Ы": 2.36,
+		"Ь": 1.84, "Э": 0.36, "Ю": 0.47, "Я": 1.96 }
 
 dict_paths = {
+		"es": "/usr/share/dict/spanish",
+		"fr": "/usr/share/dict/french",
+		"ru": "russian.dic",
 		"en": "/usr/share/dict/british-english",
 		"de": "/usr/share/dict/german",
 		"de-small": "german-small.dic"
@@ -41,6 +61,14 @@ def default_frequencies(lang):
 	if lang in [ "de", "de-small", "de-medium" ]:
 		return merge_dicts(basic_frequencies(frequencies_de),
 				scale(frequencies_de_utf))
+	if lang == "es":
+		return merge_dicts(basic_frequencies(frequencies_es),
+				scale(frequencies_es_utf))
+	if lang == "fr":
+		return merge_dicts(basic_frequencies(frequencies_fr),
+				scale(frequencies_fr_utf))
+	if lang == "ru":
+		return scale(frequencies_ru)
 	raise ValueError("no frequency table for language \"%s\"" % lang)
 
 dicts = {}

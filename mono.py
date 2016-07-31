@@ -54,7 +54,7 @@ def default_frequencies(lang):
 		return { chr(i + 97): table[i] / 100.0 \
 				for i in range(len(table)) }
 	def scale(table):
-		return { c: table[c] / 100.0 for c in table }
+		return { c.lower(): table[c] / 100.0 for c in table }
 
 	if lang == "en":
 		return basic_frequencies(frequencies_en)

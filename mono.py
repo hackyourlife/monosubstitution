@@ -30,10 +30,17 @@ frequencies_ru = { "А": 7.5, "Б": 2.01, "В": 4.33, "Г": 1.72, "Д": 3.09, "�
 		4.33, "С": 4.97, "Т": 5.97, "У": 2.22, "Ф": 0.21, "Х": 0.95,
 		"Ц": 0.39, "Ч": 1.4, "Ш": 0.72, "Щ": 0.3, "Ъ": 0.02, "Ы": 2.36,
 		"Ь": 1.84, "Э": 0.36, "Ю": 0.47, "Я": 1.96 }
+frequencies_pt = [ 14.634, 1.043, 3.882, 4.992, 12.57, 1.023, 1.303, 0.781,
+		6.186, 0.397, 0.015, 2.779, 4.738, 4.446, 9.735, 2.523, 1.204,
+		6.530, 6.805, 4.336, 3.639, 1.575, 0.037, 0.253, 0.006, 0.47 ]
+frequencies_pt_utf = { "à": 0.072, "â": 0.562, "á": 0.118, "ã": 0.733, "ç":
+		0.53, "é": 0.337, "ê": 0.45, "í": 0.132, "ô": 0.635, "ó": 0.296,
+		"ú": 0.207, "ü": 0.026 }
 
 dict_paths = {
 		"es": "/usr/share/dict/spanish",
 		"fr": "/usr/share/dict/french",
+		"pt": "portuguese.dic",
 		"ru": "russian.dic",
 		"en": "/usr/share/dict/british-english",
 		"de": "/usr/share/dict/german",
@@ -64,6 +71,9 @@ def default_frequencies(lang):
 	if lang == "es":
 		return merge_dicts(basic_frequencies(frequencies_es),
 				scale(frequencies_es_utf))
+	if lang == "pt":
+		return merge_dicts(basic_frequencies(frequencies_pt),
+				scale(frequencies_pt_utf))
 	if lang == "fr":
 		return merge_dicts(basic_frequencies(frequencies_fr),
 				scale(frequencies_fr_utf))
